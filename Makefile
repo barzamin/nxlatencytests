@@ -43,6 +43,7 @@ SOURCES		:=	source
 DATA		:=	data
 INCLUDES	:=	include
 #ROMFS	:=	romfs
+APP_TITLE   := nxlatencytester
 
 #---------------------------------------------------------------------------------
 # options for code generation
