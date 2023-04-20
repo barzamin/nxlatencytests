@@ -161,6 +161,9 @@ endif
 #---------------------------------------------------------------------------------
 all: $(BUILD)
 
+nxlink: all
+	@nxlink -s $(OUTPUT).nro
+
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
