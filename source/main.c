@@ -6,15 +6,34 @@
 // Include the main libnx system header, for Switch development
 #include <switch.h>
 
+#ifdef DISPLAY_IMAGE
+#include "image_bin.h"//Your own raw RGB888 1280x720 image at "data/image.bin" is required.
+#endif
+
+// See also libnx display/framebuffer.h.
+
+// Define the desired framebuffer resolution (here we set it to 720p).
+#define FB_WIDTH  1280
+#define FB_HEIGHT 720
+
+// Remove above and uncomment below for 1080p
+//#define FB_WIDTH  1920
+//#define FB_HEIGHT 1080
+
 // Main program entrypoint
 int main(int argc, char* argv[])
 {
-    // This example uses a text console, as a simple way to output text to the screen.
-    // If you want to write a software-rendered graphics application,
-    //   take a look at the graphics/simplegfx example, which uses the libnx Framebuffer API instead.
-    // If on the other hand you want to write an OpenGL based application,
-    //   take a look at the graphics/opengl set of examples, which uses EGL instead.
-    consoleInit(NULL);
+    // Retrieve the default window
+    NWindow* win = nwindowGetDefault();
+
+    // Create a linear double-buffered framebuffer
+    Framebuffer fb;
+    framebufferCreate(&fb, win, FB_WIDTH, FB_HEIGHT, PIXEL_FORMAT_RGBA_8888, 2);
+    framebufferMakeLinear(&fb);
+
+#ifdef DISPLAY_IMAGE
+    u8* imageptr = (u8*)image_bin;
+#endif
 
     // Configure our supported input layout: a single player with standard controller styles
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
@@ -23,8 +42,7 @@ int main(int argc, char* argv[])
     PadState pad;
     padInitializeDefault(&pad);
 
-    // Other initialization goes here. As a demonstration, we print hello world.
-    printf("Hello World!\n");
+    u32 cnt = 0;
 
     // Main loop
     while (appletMainLoop())
@@ -39,13 +57,33 @@ int main(int argc, char* argv[])
         if (kDown & HidNpadButton_Plus)
             break; // break in order to return to hbmenu
 
-        // Your code goes here
+        // Retrieve the framebuffer
+        u32 stride;
+        u32* framebuf = (u32*) framebufferBegin(&fb, &stride);
 
-        // Update the console, sending a new frame to the display
-        consoleUpdate(NULL);
+        if (cnt != 60)
+            cnt ++;
+        else
+            cnt = 0;
+
+        // Each pixel is 4-bytes due to RGBA8888.
+        for (u32 y = 0; y < FB_HEIGHT; y ++)
+        {
+            for (u32 x = 0; x < FB_WIDTH; x ++)
+            {
+                u32 pos = y * stride / sizeof(u32) + x;
+#ifdef DISPLAY_IMAGE
+                framebuf[pos] = RGBA8_MAXALPHA(imageptr[pos*3+0]+(cnt*4), imageptr[pos*3+1], imageptr[pos*3+2]);
+#else
+                framebuf[pos] = 0x01010101 * cnt * 4;//Set framebuf to different shades of grey.
+#endif
+            }
+        }
+
+        // We're done rendering, so we end the frame here.
+        framebufferEnd(&fb);
     }
 
-    // Deinitialize and clean up resources used by the console (important!)
-    consoleExit(NULL);
+    framebufferClose(&fb);
     return 0;
 }
